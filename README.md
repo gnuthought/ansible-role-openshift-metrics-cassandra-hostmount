@@ -3,6 +3,13 @@ Role Name
 
 An Ansible role for configuring hostmount for cassadra database.
 
+Installation
+------------
+
+```
+ansible-galaxy install https://github.com/jkupferer/ansible-role-openshift-metrics-cassandra-hostmount/archive/master.tar.gz#/openshift-metrics-cassandra-hostmount
+```
+
 Requirements
 ------------
 
