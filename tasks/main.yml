@@ -40,6 +40,6 @@
   register: get_cassandra_rcs
 
 - include: configure-rc.yml
-  with_items: get_cassandra_rcs.stdout_lines
+  with_items: "{{ get_cassandra_rcs.stdout_lines }}"
   loop_control:
     loop_var: cassandra_rc
