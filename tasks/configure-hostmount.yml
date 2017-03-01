@@ -1,0 +1,19 @@
+- name: Patch rc {{ cassandra_rc }} to run privileged container
+  command: >
+    oc patch rc -n openshift-infra {{ cassandra_rc }}
+    -p {{ patch | to_json | quote }}
+  vars:
+    patch:
+      spec:
+        template:
+          spec:
+            containers:
+            - name: "{{ cassandra_rc }}"
+              securityContext:
+                privileged: true
+
+- name: Add hostPath volume to cassandra rc
+  command: >
+    oc set volume -n openshift-infra rc/{{ cassandra_rc }}
+    --add --overwrite --name=cassandra-data
+    --type=hostPath --path={{ openshift_metrics_cassandra_hostmount_path }}

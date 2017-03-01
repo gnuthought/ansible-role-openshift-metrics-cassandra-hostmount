@@ -1,0 +1,10 @@
+- name: Patch rc {{ cassandra_rc }} run only on {{ cassandra_node }}
+  command: >
+    oc patch rc -n openshift-infra {{ cassandra_rc }} -p {{ patch | to_json | quote }}
+  vars:
+    patch:
+      spec:
+        template:
+          spec:
+            nodeSelector:
+              kubernetes.io/hostname: "{{ cassandra_node }}"

@@ -1,0 +1,45 @@
+---
+# Set privileges required for hostmount
+- include: privileges.yml
+
+- name: Get nodes matching cassandra selector
+  command: >
+    oc get node -l {{ openshift_metrics_cassandra_nodeselector }}
+    --template '{{ '{{ range .items }}{{ .metadata.name }}{{ "\n"}}{{ end }}' }}'
+  changed_when: false
+  register: get_cassandra_nodes
+
+- name: Cassandra hostmount directory on nodes
+  delegate_to: "{{ item }}"
+  file:
+    state: directory
+    path: "{{ openshift_metrics_cassandra_hostmount_path }}"
+    recurse: yes
+    owner: root
+    group: root
+    mode: u=rwx,g=rwx,o=rwx
+  with_items: "{{ get_cassandra_nodes.stdout_lines }}"
+
+- name: Get list of cassandra nodes with hostmount
+  shell: >
+    oc get rc -n openshift-infra -l metrics-infra=hawkular-cassandra
+    --template '{{ '{{ range .items }}{{ index .spec.template.spec.nodeSelector "kubernetes.io/hostname" }} {{ range .spec.template.spec.volumes }}{{ .hostPath.path }} {{ end }}{{ "\n" }}{{ end }}' }}'
+    | grep ' {{ openshift_metrics_cassandra_hostmount_path }}'
+    | sed 's/ .*//'
+  changed_when: false
+  register: get_cassandra_nodes_with_hostmount
+
+- set_fact:
+    openshift_metrics_cassandra_hostmount_available_nodes: "{{ get_cassandra_nodes.stdout_lines | difference(get_cassandra_nodes_with_hostmount.stdout_lines) }}"
+
+- name: Get list of cassandra replication controllers
+  command: >
+    oc get rc -n openshift-infra -l metrics-infra=hawkular-cassandra
+    --template '{{ '{{ range .items }}{{ .metadata.name }}{{ "\n" }}{{ end }}' }}'
+  changed_when: false
+  register: get_cassandra_rcs
+
+- include: configure-rc.yml
+  with_items: get_cassandra_rcs.stdout_lines
+  loop_control:
+    loop_var: cassandra_rc

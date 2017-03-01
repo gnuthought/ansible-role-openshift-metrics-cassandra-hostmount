@@ -1,0 +1,10 @@
+- name: Get users with securitycontextconstraints privileged
+  command: oc get securitycontextconstraints privileged --template '{{ '{{ range .users }}{{ . }}{{ "\n" }}{{ end }}' }}'
+  register: get_securitycontextconstraints_privileged
+  changed_when: false
+
+- name: Grant privileged rights to the service account for cassandra
+  command: >
+    oc adm policy add-scc-to-user privileged
+    system:serviceaccount:openshift-infra:cassandra
+  when: "'system:serviceaccount:openshift-infra:cassandra' not in get_securitycontextconstraints_privileged.stdout_lines"

@@ -1,0 +1,9 @@
+---
+# Default location for the cassandra hostmount
+openshift_metrics_cassandra_hostmount_path: /srv/openshift-metrics-cassandra-hostmount
+
+# Default nodeselector for cassandra
+openshift_metrics_cassandra_nodeselector: region=infra
+
+# Default number of cassandra replicas
+openshift_metrics_cassandra_replicas: 1

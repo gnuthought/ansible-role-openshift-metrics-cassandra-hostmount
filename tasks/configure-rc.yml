@@ -1,0 +1,43 @@
+# 
+# * The replication controller must be configured to run exclusively run on a
+#   specific node 
+#
+# * The rc must be patch for hostmount
+#
+
+- name: Get current hostame node selector for rc {{ cassandra_rc }}
+  command: >
+    oc get rc -n openshift-infra {{ cassandra_rc }}
+    --template '{{ '{{ range $k, $v := .spec.template.spec.nodeSelector }}{{ $k }}={{ $v }}{{ "\n" }}{{ end }}' }}'
+  changed_when: false
+  register: get_current_node_selector
+
+- name: Check for hostmount on {{ cassandra_rc }}
+  shell: >
+    oc volumes rc/{{ cassandra_rc }} -n openshift-infra --name=cassandra-data
+    | grep "empty dir"
+  failed_when: false
+  changed_when: false
+  register: check_hostmount_required
+
+- when: check_hostmount_required.rc == 0 or 'kubernetes.io/hostname=' not in get_current_node_selector.stdout
+  block:
+
+  - name: Scale down {{ cassandra_rc }} prior to changes
+    command: oc scale -n openshift-infra rc {{ cassandra_rc }} --replicas=0
+
+  - include: bind-rc-to-node.yml
+    vars:
+      cassandra_node: "{{ openshift_metrics_cassandra_hostmount_available_nodes[0] }}"
+    static: no
+    when: "'kubernetes.io/hostname=' not in get_current_node_selector.stdout"
+
+  - set_fact:
+      openshift_metrics_cassandra_hostmount_available_nodes: "{{ openshift_metrics_cassandra_hostmount_available_nodes | difference([openshift_metrics_cassandra_hostmount_available_nodes[0]]) }}"
+
+  - include: configure-hostmount.yml
+    static: no
+    when: check_hostmount_required.rc == 0
+
+  - name: Scale up {{ cassandra_rc }}
+    command: oc scale -n openshift-infra rc {{ cassandra_rc }} --replicas=1
