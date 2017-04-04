@@ -15,9 +15,9 @@
     state: directory
     path: "{{ openshift_metrics_cassandra_hostmount_path }}"
     recurse: yes
-    owner: root
-    group: root
-    mode: u=rwx,g=rwx,o=rwx
+    owner: "{{ openshift_metrics_cassandra_hostmount_path_owner }}"
+    group: "{{ openshift_metrics_cassandra_hostmount_path_group }}"
+    mode: "{{ openshift_metrics_cassandra_hostmount_path_mode }}"
   with_items: "{{ get_cassandra_nodes.stdout_lines }}"
 
 - name: Get list of cassandra nodes with hostmount
