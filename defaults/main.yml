@@ -3,12 +3,16 @@
 openshift_metrics_cassandra_hostmount_path: /srv/openshift-metrics-cassandra-hostmount
 
 # Ownership and modes for hostmount path
-openshift_metrics_cassandra_hostmount_path_owner: root
-openshift_metrics_cassandra_hostmount_path_group: root
-openshift_metrics_cassandra_hostmount_path_mode: u=rwx,g=rwx,o=rwx
+openshift_metrics_cassandra_hostmount_path_owner: 313
+openshift_metrics_cassandra_hostmount_path_group: 312
+openshift_metrics_cassandra_hostmount_path_mode: u=rwx,g=rwx,o=
 
 # Default nodeselector for cassandra
 openshift_metrics_cassandra_nodeselector: region=infra
 
 # Default number of cassandra replicas
 openshift_metrics_cassandra_replicas: 1
+
+# Default user and group ids for cassandra to run under:
+openshift_metrics_cassandra_uid: 313
+openshift_metrics_cassandra_gid: 312

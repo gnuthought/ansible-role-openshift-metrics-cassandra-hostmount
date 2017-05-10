@@ -1,10 +1,68 @@
-- name: Get users with securitycontextconstraints privileged
-  command: oc get securitycontextconstraints privileged --template '{{ '{{ range .users }}{{ . }}{{ "\n" }}{{ end }}' }}'
-  register: get_securitycontextconstraints_privileged
+- name: Get SecurityContextConstraint metrics-cassandra
+  command: >
+    oc export scc metrics-cassandra -o json
+  register: get_scc
+  changed_when: false
+  failed_when: false
+
+- name: Apply SecurityContextConstraint metrics-cassandra
+  shell: >
+    echo {{ scc_definition | to_json | quote }} | oc apply -f -
+  vars:
+    scc_definition:
+      kind: SecurityContextConstraints
+      apiVersion: v1
+      metadata:
+        name: metrics-cassandra
+        creationTimestamp: null
+      allowHostDirVolumePlugin: true
+      allowHostIPC: false
+      allowHostNetwork: false
+      allowHostPID: false
+      allowHostPorts: false
+      allowPrivilegedContainer: true
+      allowedCapabilities: null
+      defaultAddCapabilities: null
+      fsGroup:
+        type: MustRunAs
+        ranges:
+        - min: "{{ openshift_metrics_cassandra_gid }}"
+          max: "{{ openshift_metrics_cassandra_gid }}"
+      priority: null
+      readOnlyRootFilesystem: false
+      requiredDropCapabilities: null
+      runAsUser:
+        type: MustRunAsRange
+        uidRangeMin: "{{ openshift_metrics_cassandra_uid }}"
+        uidRangeMax: "{{ openshift_metrics_cassandra_uid }}"
+      seLinuxContext:
+        type: RunAsAny
+      seccompProfiles:
+      - '*'
+      supplementalGroups:
+        type: MustRunAs
+        ranges:
+        - min: "{{ openshift_metrics_cassandra_gid }}"
+          max: "{{ openshift_metrics_cassandra_gid }}"
+      users:
+      - system:serviceaccount:openshift-infra:cassandra
+      volumes:
+      - '*'
+    current_scc: "{{ get_scc.stdout if get_scc.rc == 0 else '{}' | from_json }}"
+  when: >-
+    get_scc.rc != 0
+    or 
+    current_scc != scc_definition | combine({"metadata":{"annotations": current_scc.metadata.annotations}}, recursive=True)
+
+- name: Get users with securitycontextconstraints metrics-cassandra
+  command: >-
+    oc get securitycontextconstraints metrics-cassandra
+    --template '{{ '{{ range .users }}{{ . }}{{ "\n" }}{{ end }}' }}'
+  register: get_scc_users
   changed_when: false
 
-- name: Grant privileged rights to the service account for cassandra
-  command: >
-    oc adm policy add-scc-to-user privileged
+- name: Add cassandra service account to metrics-cassandra SCC
+  command: >-
+    oc adm policy add-scc-to-user metrics-cassandra
     system:serviceaccount:openshift-infra:cassandra
-  when: "'system:serviceaccount:openshift-infra:cassandra' not in get_securitycontextconstraints_privileged.stdout_lines"
+  when: "'system:serviceaccount:openshift-infra:cassandra' not in get_scc_users.stdout_lines"
