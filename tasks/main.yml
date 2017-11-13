@@ -3,8 +3,13 @@
 - include: privileges.yml
 
 - name: Get nodes matching cassandra selector
-  command: >
-    oc get node -l {{ openshift_metrics_cassandra_nodeselector }}
+  command: >-
+    oc get node
+    {% if openshift_metrics_cassandra_nodeselector is mapping %}
+    -l {% for k, v in openshift_metrics_cassandra_nodeselector.items() %}{{ k }}={{ v }}{% if not loop.last %}","{% endif %}{% endfor %}
+    {% else %}
+    -l {{ openshift_metrics_cassandra_nodeselector }}
+    {% endif %}
     --template '{{ '{{ range .items }}{{ .metadata.name }}{{ "\n"}}{{ end }}' }}'
   changed_when: false
   register: get_cassandra_nodes
@@ -17,6 +22,7 @@
     owner: "{{ openshift_metrics_cassandra_hostmount_path_owner }}"
     group: "{{ openshift_metrics_cassandra_hostmount_path_group }}"
     mode: "{{ openshift_metrics_cassandra_hostmount_path_mode }}"
+    setype: svirt_sandbox_file_t
   with_items: "{{ get_cassandra_nodes.stdout_lines }}"
 
 - name: Get list of cassandra nodes with hostmount
